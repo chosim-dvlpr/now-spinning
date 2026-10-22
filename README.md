@@ -3,6 +3,8 @@
 Spotify에서 재생 중인 곡을 화면 맨 위에 항상 떠 있는 CD 위젯으로 보여주는 macOS 앱.
 앨범 커버가 CD처럼 돌아가고, 아래에 곡 정보와 실제 소리에 반응하는 파형이 표시됩니다.
 
+<p align="center"><img src="docs/screenshot.png" width="240" alt="NowSpinning 위젯"></p>
+
 - 어떤 앱이 앞에 있든, 전체화면이든 항상 위에 떠 있음
 - 커버 색에 맞춰 곡마다 바뀌는 정보 박스와 파형 색
 - 클릭하면 Spotify 열기, 드래그로 이동, 메뉴바 아이콘에서 종료
