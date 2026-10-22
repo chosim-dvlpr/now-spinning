@@ -13,7 +13,15 @@ Spotify에서 재생 중인 곡을 화면 맨 위에 항상 떠 있는 CD 위젯
 - Spotify 데스크톱 앱
 - Xcode Command Line Tools (`xcode-select --install`)
 
-## 빌드 및 실행
+## 설치
+
+```sh
+brew install --cask chosim-dvlpr/tap/now-spinning
+```
+
+업데이트는 `brew upgrade --cask now-spinning` 또는 메뉴바 아이콘의 "업데이트 설치"로 할 수 있습니다.
+
+## 소스에서 빌드
 
 ```sh
 git clone https://github.com/chosim-dvlpr/now-spinning.git
