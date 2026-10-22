@@ -41,9 +41,12 @@ final class Updater {
                 let dest = Bundle.main.bundleURL
                 try FileManager.default.trashItem(at: dest, resultingItemURL: nil)
                 try FileManager.default.moveItem(at: newApp, to: dest)
-                DispatchQueue.main.async {
-                    NSWorkspace.shared.openApplication(at: dest, configuration: .init()) { _, _ in NSApp.terminate(nil) }
-                }
+                // 같은 번들 ID가 떠 있으면 open이 기존 인스턴스를 활성화만 하므로, 종료 후 1초 뒤에 열도록 분리된 셸에 맡김
+                let relaunch = Process()
+                relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+                relaunch.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", dest.path]
+                try relaunch.run()
+                DispatchQueue.main.async { NSApp.terminate(nil) }
             } catch { fail(error.localizedDescription) }
         }.resume()
     }
