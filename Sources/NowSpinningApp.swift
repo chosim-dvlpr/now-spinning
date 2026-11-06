@@ -36,7 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderFrontRegardless()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "opticaldisc", accessibilityDescription: nil)
+        let icon = NSApp.applicationIconImage.copy() as! NSImage
+        icon.size = NSSize(width: 18, height: 18)
+        statusItem.button?.image = icon
         let menu = NSMenu()
         updateItem = menu.addItem(withTitle: "업데이트 확인…", action: #selector(checkUpdateClicked), keyEquivalent: "u")
         updateItem.target = self

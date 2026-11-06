@@ -9,12 +9,13 @@ final class SpotifyPoller: ObservableObject {
     @Published var artwork: NSImage?
     @Published var accent = NSColor(white: 0.2, alpha: 1)
     @Published var pid: pid_t = 0
+    @Published var volume = 50
     private var artworkURL = ""
 
     private let script = NSAppleScript(source: """
     tell application "Spotify"
         if it is running then
-            return {player state as string, name of current track, artist of current track, artwork url of current track}
+            return {player state as string, name of current track, artist of current track, artwork url of current track, sound volume}
         end if
         return {"off"}
     end tell
@@ -29,11 +30,12 @@ final class SpotifyPoller: ObservableObject {
         var err: NSDictionary?
         let r = script.executeAndReturnError(&err)
         pid = NSRunningApplication.runningApplications(withBundleIdentifier: "com.spotify.client").first?.processIdentifier ?? 0
-        guard r.numberOfItems >= 4 else { running = false; playing = false; return }
+        guard r.numberOfItems >= 5 else { running = false; playing = false; return }
         running = true
         playing = r.atIndex(1)?.stringValue == "playing"
         title = r.atIndex(2)?.stringValue ?? ""
         artist = r.atIndex(3)?.stringValue ?? ""
+        volume = Int(r.atIndex(5)?.int32Value ?? 50)
         let url = r.atIndex(4)?.stringValue ?? ""
         if url != artworkURL, let u = URL(string: url), u.scheme == "https" {  // Spotify CDN만, 평문 http 차단
             artworkURL = url
@@ -44,6 +46,15 @@ final class SpotifyPoller: ObservableObject {
             }.resume()
         }
     }
+
+    /// cmd는 코드에 고정된 문자열만 넘김 (외부 입력 금지)
+    func send(_ cmd: String) {
+        var err: NSDictionary?
+        NSAppleScript(source: "tell application \"Spotify\" to \(cmd)")?.executeAndReturnError(&err)
+        poll()
+    }
+
+    func setVolume(_ v: Int) { send("set sound volume to \(min(100, max(0, v)))") }
 
     /// 미실행이면 실행, 실행 중이면 맨 앞으로
     func activatePlayer() { NSWorkspace.shared.open(URL(string: "spotify:")!) }
