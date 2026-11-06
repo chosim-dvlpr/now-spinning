@@ -36,19 +36,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderFrontRegardless()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let icon = NSApp.applicationIconImage.copy() as! NSImage
-        icon.size = NSSize(width: 18, height: 18)
-        statusItem.button?.image = icon
+        statusItem.button?.image = Self.menuIcon(badge: false)
         let menu = NSMenu()
         updateItem = menu.addItem(withTitle: "업데이트 확인…", action: #selector(checkUpdateClicked), keyEquivalent: "u")
         updateItem.target = self
         menu.addItem(withTitle: "Quit NowSpinning", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
         checkUpdate(silent: true)
+        // 앱을 켜둔 채 지내는 사용자도 알 수 있게 24시간마다 재확인.
+        // 이미 찾았으면 건너뜀: pending이 있으면 checkUpdate가 바로 설치로 넘어가기 때문
+        Timer.scheduledTimer(withTimeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in
+            if self?.pending == nil { self?.checkUpdate(silent: true) }
+        }
 
         spotify.$pid.removeDuplicates().sink { [audio] in audio.retarget(pid: $0) }.store(in: &bag)
         spotify.start()
         audio.start()
+    }
+
+    /// 앱 아이콘 18pt. 새 버전이 있으면 오른쪽 위에 빨간 점
+    private static func menuIcon(badge: Bool) -> NSImage {
+        let base = NSApp.applicationIconImage!
+        return NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
+            base.draw(in: rect)
+            if badge {
+                NSColor.systemRed.setFill()
+                NSBezierPath(ovalIn: NSRect(x: 11, y: 11, width: 7, height: 7)).fill()
+            }
+            return true
+        }
     }
 
     @objc private func checkUpdateClicked() { checkUpdate(silent: false) }
@@ -62,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.pending = r
                 self.updateItem.isEnabled = true
                 self.updateItem.title = r.map { "v\($0.version) 업데이트 설치" } ?? "업데이트 확인…"
+                self.statusItem.button?.image = Self.menuIcon(badge: r != nil)
                 if !silent, r == nil { self.alert("최신 버전입니다 (v\(Updater.current))") }
             }
         }
