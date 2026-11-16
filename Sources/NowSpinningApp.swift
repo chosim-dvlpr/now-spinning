@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import ServiceManagement
 
 @main
 struct NowSpinningApp: App {
@@ -7,10 +8,11 @@ struct NowSpinningApp: App {
     var body: some Scene { Settings { EmptyView() } }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
     private var updateItem: NSMenuItem!
+    private var loginItem: NSMenuItem!
     private var pending: Updater.Release?
     private let spotify = SpotifyPoller()
     private var bag = Set<AnyCancellable>()
@@ -42,7 +44,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         updateItem = menu.addItem(withTitle: "업데이트 확인…", action: #selector(checkUpdateClicked), keyEquivalent: "u")
         updateItem.target = self
+        loginItem = menu.addItem(withTitle: "로그인 시 실행", action: #selector(toggleLogin), keyEquivalent: "")
+        loginItem.target = self
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit NowSpinning", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.delegate = self
         statusItem.menu = menu
         checkUpdate(silent: true)
         // 앱을 켜둔 채 지내는 사용자도 알 수 있게 24시간마다 재확인.
@@ -66,6 +72,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSBezierPath(ovalIn: NSRect(x: 11, y: 11, width: 7, height: 7)).fill()
             }
             return true
+        }
+    }
+
+    /// 시스템 설정에서 바꿨을 수도 있으니 메뉴를 열 때마다 실제 상태로 체크 표시
+    func menuWillOpen(_ menu: NSMenu) {
+        loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+
+    @objc private func toggleLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
+            else { try SMAppService.mainApp.register() }
+        } catch {
+            alert("로그인 항목 설정 실패: \(error.localizedDescription)")
         }
     }
 
