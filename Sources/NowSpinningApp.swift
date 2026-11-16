@@ -33,6 +33,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let f = screen.visibleFrame
             panel.setFrameOrigin(NSPoint(x: f.maxX - 204, y: f.maxY - 232))
         }
+        // 저장된 위치가 있으면 복원하고, 이후 옮길 때마다 UserDefaults에 저장. 없으면 위 기본 위치
+        panel.setFrameAutosaveName("Widget")
         panel.orderFrontRegardless()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
