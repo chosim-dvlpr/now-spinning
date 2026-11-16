@@ -10,12 +10,15 @@ final class SpotifyPoller: ObservableObject {
     @Published var accent = NSColor(white: 0.2, alpha: 1)
     @Published var pid: pid_t = 0
     @Published var volume = 50
+    @Published var shuffling = false
+    @Published var repeating = false
+    private var trackURI = ""
     private var artworkURL = ""
 
     private let script = NSAppleScript(source: """
     tell application "Spotify"
         if it is running then
-            return {player state as string, name of current track, artist of current track, artwork url of current track, sound volume}
+            return {player state as string, name of current track, artist of current track, artwork url of current track, sound volume, spotify url of current track, shuffling, repeating}
         end if
         return {"off"}
     end tell
@@ -30,12 +33,15 @@ final class SpotifyPoller: ObservableObject {
         var err: NSDictionary?
         let r = script.executeAndReturnError(&err)
         pid = NSRunningApplication.runningApplications(withBundleIdentifier: "com.spotify.client").first?.processIdentifier ?? 0
-        guard r.numberOfItems >= 5 else { running = false; playing = false; return }
+        guard r.numberOfItems >= 8 else { running = false; playing = false; return }
         running = true
         playing = r.atIndex(1)?.stringValue == "playing"
         title = r.atIndex(2)?.stringValue ?? ""
         artist = r.atIndex(3)?.stringValue ?? ""
         volume = Int(r.atIndex(5)?.int32Value ?? 50)
+        trackURI = r.atIndex(6)?.stringValue ?? ""
+        shuffling = r.atIndex(7)?.booleanValue ?? false
+        repeating = r.atIndex(8)?.booleanValue ?? false
         let url = r.atIndex(4)?.stringValue ?? ""
         if url != artworkURL, let u = URL(string: url), u.scheme == "https" {  // Spotify CDN만, 평문 http 차단
             artworkURL = url
@@ -55,6 +61,20 @@ final class SpotifyPoller: ObservableObject {
     }
 
     func setVolume(_ v: Int) { send("set sound volume to \(min(100, max(0, v)))") }
+
+    /// "spotify:track:ID" → 공유용 https 링크. 형식이 다르면(로컬 파일, 광고 등) nil
+    var shareURL: URL? {
+        let parts = trackURI.split(separator: ":")
+        guard parts.count == 3, parts[0] == "spotify", parts[1].allSatisfy(\.isLetter),
+              parts[2].allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        return URL(string: "https://open.spotify.com/\(parts[1])/\(parts[2])")
+    }
+
+    func copyShareURL() {
+        guard let u = shareURL else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(u.absoluteString, forType: .string)
+    }
 
     /// 미실행이면 실행, 실행 중이면 맨 앞으로
     func activatePlayer() { NSWorkspace.shared.open(URL(string: "spotify:")!) }

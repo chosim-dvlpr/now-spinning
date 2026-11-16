@@ -47,6 +47,14 @@ struct WidgetView: View {
         .onChange(of: spotify.volume) { if !editingVolume { volume = Double($1) } }
         .onHover { h in withAnimation(.easeInOut(duration: 0.2)) { hovering = h } }
         .onTapGesture { spotify.activatePlayer() }
+        .contextMenu {
+            Button("곡 링크 복사") { spotify.copyShareURL() }.disabled(spotify.shareURL == nil)
+            Divider()
+            Toggle("셔플", isOn: Binding(get: { spotify.shuffling }, set: { _ in spotify.send("set shuffling to not shuffling") }))
+            Toggle("반복", isOn: Binding(get: { spotify.repeating }, set: { _ in spotify.send("set repeating to not repeating") }))
+            Divider()
+            Button("Spotify 열기") { spotify.activatePlayer() }
+        }
     }
 
     private var cd: some View {
