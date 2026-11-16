@@ -98,7 +98,7 @@ struct WidgetView: View {
             VStack(spacing: 14) {
                 HStack(spacing: 18) {
                     button("backward.fill", 16) { wipeDir = -1; spotify.send("previous track") }
-                    button(spotify.playing ? "pause.fill" : "play.fill", 26) { spotify.send("playpause") }
+                    button(spotify.playing ? "pause.fill" : "play.fill", 26) { spotify.togglePlay() }
                     button("forward.fill", 16) { wipeDir = 1; spotify.send("next track") }
                 }
                 HStack(spacing: 4) {

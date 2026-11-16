@@ -13,6 +13,8 @@ final class SpotifyPoller: ObservableObject {
     @Published var shuffling = false
     @Published var repeating = false
     private var trackURI = ""
+    /// Spotify는 일시정지 후 player state를 수백 ms 늦게 갱신함. 그동안 폴링이 낙관적 값을 덮어쓰지 않게 막음
+    private var holdPlayingUntil = Date.distantPast
     private var artworkURL = ""
 
     private let script = NSAppleScript(source: """
@@ -35,7 +37,7 @@ final class SpotifyPoller: ObservableObject {
         pid = NSRunningApplication.runningApplications(withBundleIdentifier: "com.spotify.client").first?.processIdentifier ?? 0
         guard r.numberOfItems >= 8 else { running = false; playing = false; return }
         running = true
-        playing = r.atIndex(1)?.stringValue == "playing"
+        if Date() >= holdPlayingUntil { playing = r.atIndex(1)?.stringValue == "playing" }
         title = r.atIndex(2)?.stringValue ?? ""
         artist = r.atIndex(3)?.stringValue ?? ""
         volume = Int(r.atIndex(5)?.int32Value ?? 50)
@@ -57,7 +59,15 @@ final class SpotifyPoller: ObservableObject {
     func send(_ cmd: String) {
         var err: NSDictionary?
         NSAppleScript(source: "tell application \"Spotify\" to \(cmd)")?.executeAndReturnError(&err)
-        poll()
+        // 바로 읽으면 바뀌기 전 상태가 옴. Spotify가 반영할 시간을 두고 갱신
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.poll() }
+    }
+
+    /// 화면부터 바꾸고(CD·파형 즉시 정지), 명령은 다음 런루프에서 보냄. AppleScript가 메인 스레드를 ~0.2초 잡기 때문
+    func togglePlay() {
+        playing.toggle()
+        holdPlayingUntil = Date() + 1.5
+        DispatchQueue.main.async { self.send("playpause") }
     }
 
     func setVolume(_ v: Int) { send("set sound volume to \(min(100, max(0, v)))") }
